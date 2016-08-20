@@ -1,72 +1,63 @@
 const pull = require('pull-stream/pull')
-const drain = require('pull-stream/sinks/drain')
+const through = require('pull-stream/throughs/through')
+const map = require('pull-paramap')
 const Worker = require('webworker-threads').Worker
-const Pushable = require('pull-pushable')
-
-// TODO
-// do as a map async
-//
-// stream
-// - read next value
-// - generate id for this task
-// - send task to next ready worker
-// - register task id with callback
-//
 
 module.exports = compute
 
-function compute (computation) {
+function compute (fn) {
+  const worker = createWorker(fn)
+
+  var id = 0
+  var jobs = {}
+  var end
+
+  worker.onmessage = function (ev) {
+    const data = ev.data
+    const cb = jobs[data.jobId]
+    delete jobs[data.jobId]
+      
+    if (data.error) {
+      cb(data.error)
+    } else {
+      cb(null, data.result)
+    }
+  }
+
+  return pull(
+    map(function (data, cb) {
+      const jobId = id++
+      jobs[jobId] = cb
+
+      worker.postMessage({
+        jobId,
+        data
+      })
+    }, 4),
+    through(null, function (abort) {
+      worker.terminate()
+    })
+  )
+}
+
+function createWorker (fn) {
   const work = parseFunction(`function () {
-    const computation = ${stringifyFunction(computation)}
+    const computation = ${stringifyFunction(fn)}
     this.onmessage = function (ev) {
-      const data = ev.data
+      const jobId = ev.data.jobId
+      const data = ev.data.data
       computation(data, function (err, result) {
         if (err) {
-          postMessage({ error: err })
+          postMessage({ jobId, error: err })
           self.close()
         } else {
-          postMessage({ result })
+          postMessage({ jobId, result })
         }
       })
     }
   }`)
-  const worker = new Worker(work)
-  var end
-  const results = Pushable(function (err) {
-    if (!end) drainer.abort(err)
-    end = err || true
-  })
 
-  const drainer = drain(function (data) {
-    worker.postMessage(data)
-  }, function (err) {
-    if (err === null) {
-      setTimeout(function () {
-        end = true
-        results.end()
-      }, 100)
-      return
-    }
-    if (!end) results.end(err)
-    end = err || true
-  })
-
-  worker.onmessage = function (ev) {
-    const data = ev.data || {}
-    const error = data.error
-    const result = data.result
-      
-    if (error) {
-      results.end(error)
-    } else {
-      results.push(result)
-    }
-  }
-
-  return function (read) {
-    pull(read, drainer)
-    return results
-  }
+  return new Worker(work)
 }
 
 function parseFunction (str) {
