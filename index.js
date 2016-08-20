@@ -5,7 +5,7 @@ const Worker = require('webworker-threads').Worker
 
 module.exports = compute
 
-function compute (fn) {
+function compute (fn, width) {
   const worker = createWorker(fn)
 
   var id = 0
@@ -33,7 +33,7 @@ function compute (fn) {
         jobId,
         data
       })
-    }, 4),
+    }, width),
     through(null, function (abort) {
       worker.terminate()
     })
