@@ -1,0 +1,31 @@
+{
+  "name": "pull-compute",
+  "version": "0.0.0",
+  "description": "compute across multiple processes using pull streams",
+  "main": "index.js",
+  "scripts": {
+    "test": "tape test.js",
+    "start": "node-dev example"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ahdinosaur/pull-compute.git"
+  },
+  "keywords": [],
+  "author": "Mikey <michael.williams@enspiral.com> (http://dinosaur.is)",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/ahdinosaur/pull-compute/issues"
+  },
+  "homepage": "https://github.com/ahdinosaur/pull-compute#readme",
+  "devDependencies": {
+    "node-dev": "^3.1.0",
+    "npm-run-all": "^1.6.0",
+    "tape": "^4.5.1"
+  },
+  "dependencies": {
+    "pull-pushable": "^2.0.1",
+    "pull-stream": "^3.4.3",
+    "webworker-threads": "^0.7.8"
+  }
+}
